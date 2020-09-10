@@ -16,12 +16,41 @@ urls = (
 )
 
 
-def clean(txt):
+def clean(txt, href=''):
     def rm_line_breaks(match_obj):
         s1 = re.sub(r'[\n\r]+', ' ', match_obj.group(1))
         s2 = re.sub(r'[\n\r]+', ' ', match_obj.group(3))
         res = f'[[{s1}][{s2}]]'
         return res
+
+    def need_cleaning(domain):
+        if len(domain) > 0 and domain in ['www.bloomberg.com']:
+            return True
+        return False
+
+    def update_patterns(rm_patterns, rp_patterns, domain, filters):
+        if (domain in filters):
+            rp = filters[domain]['rp_patterns']
+            rm = filters[domain]['rm_patterns']
+        rp_patterns += rp
+        rm_patterns += rm
+        return (rm_patterns, rp_patterns)
+
+    filters = {'www.bloomberg.com' :
+                {'rp_patterns':[
+                        (r'\[\[((.|\n)+?)\]\[((.|\n)+?)\]\]', rm_line_breaks),
+                        (r'^\*([^\*\n]+?)\*$', r'\*\* \1'),
+                        (r'(?<!^)\n(?!(\n|$))', ''),
+                        (r'\[\[([^\]]+?)\]\[\]\](\n*)(\w+)', r' [[\1][\3]]'),
+                        (r'\n', r'\n\n')
+                        ],
+                'rm_patterns': []}
+                }
+
+    if len(href) > 0:
+        domain = get_domain(href)
+    else:
+        domain = ''
 
     if len(txt) > 0:
         rm_patterns = [r'<<.+?>>', r'\\\\']
@@ -36,19 +65,25 @@ def clean(txt):
             # (r'\n', r'\n\n')
 
         ]
-        for p in rm_patterns:
-            txt = re.sub(p, r'', txt)
-        for i, p in enumerate(rp_patterns):
-            txt = re.sub(p[0], p[1], txt)
+
+        if need_cleaning(domain):
+            rm_patterns, rp_patterns = update_patterns(rm_patterns, rp_patterns, domain, filters)
+            for p in rm_patterns:
+                txt = re.sub(p, r'', txt)
+            for i, p in enumerate(rp_patterns):
+                txt = re.sub(p[0], p[1], txt)
+        print(txt)
         return txt
-    else:
-        return ''
 
 
 def expand_gist(match_obj):
     id = match_obj.group(2)
     return f'<pre>{gist.get_content(id)}</pre>'
 
+
+def get_domain(url):
+    res = re.match(r'https?:\/\/([^\/]+?)/.*', url).group(1)
+    return res
 
 def capture(input):
     input = re.sub(r'<div gistlink=\"https:\/\/gist.github.com\/(.+?)\/(.+?)\.js\">', expand_gist, input)
@@ -62,11 +97,14 @@ def capture(input):
 
 class index:
     def POST(self):
-        html = web.data().decode('utf8')
+        raw_input = web.data().decode('utf8')
+        input = re.match(r'([^\n]+?)\n(.*)', raw_input)
+        href = input.group(1)
+        html = raw_input
         web.header('Access-Control-Allow-Origin',      '*')
         web.header('Access-Control-Allow-Credentials', 'true')
         web.header('Content-Type', 'application/text')
-        return clean(capture(html))
+        return clean(capture(html), href)
 
 
 class fullpage:
