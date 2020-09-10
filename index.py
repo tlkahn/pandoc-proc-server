@@ -1,5 +1,4 @@
 import web
-import json
 import pypandoc
 import os
 import requests
@@ -7,8 +6,8 @@ from readability import Document
 import re
 import pdb
 import gist
-os.environ.setdefault('PYPANDOC_PANDOC', '/usr/local/bin/pandoc')
 
+os.environ.setdefault('PYPANDOC_PANDOC', '/usr/local/bin/pandoc')
 
 urls = (
     '/', 'index',
@@ -23,29 +22,31 @@ def clean(txt, href=''):
         res = f'[[{s1}][{s2}]]'
         return res
 
-    def need_cleaning(domain):
-        if len(domain) > 0 and domain in ['www.bloomberg.com']:
+    def need_cleaning(_domain):
+        if len(_domain) > 0 and _domain in ['www.bloomberg.com']:
             return True
         return False
 
-    def update_patterns(rm_patterns, rp_patterns, domain, filters):
-        if (domain in filters):
-            rp = filters[domain]['rp_patterns']
-            rm = filters[domain]['rm_patterns']
-        rp_patterns += rp
-        rm_patterns += rm
-        return (rm_patterns, rp_patterns)
+    def update_patterns(_rm_patterns, _rp_patterns, _domain, _filters):
+        rp = []
+        rm = []
+        if (_domain in _filters):
+            rp = _filters[_domain]['rp_patterns']
+            rm = _filters[_domain]['rm_patterns']
+        _rp_patterns += rp
+        _rm_patterns += rm
+        return (_rm_patterns, _rp_patterns)
 
-    filters = {'www.bloomberg.com' :
-                {'rp_patterns':[
-                        (r'\[\[((.|\n)+?)\]\[((.|\n)+?)\]\]', rm_line_breaks),
-                        (r'^\*([^\*\n]+?)\*$', r'\*\* \1'),
-                        (r'(?<!^)\n(?!(\n|$))', ''),
-                        (r'\[\[([^\]]+?)\]\[\]\](\n*)(\w+)', r' [[\1][\3]]'),
-                        (r'\n', r'\n\n')
-                        ],
-                'rm_patterns': []}
-                }
+    filters = {'www.bloomberg.com':
+        {'rp_patterns': [
+            (r'\[\[((.|\n)+?)\]\[((.|\n)+?)\]\]', rm_line_breaks),
+            (r'^\*([^\*\n]+?)\*$', r'\*\* \1'),
+            (r'(?<!^)\n(?!(\n|$))', ''),
+            (r'\[\[([^\]]+?)\]\[\]\](\n*)(\w+)', r' [[\1][\3]]'),
+            (r'\n', r'\n\n')
+        ],
+            'rm_patterns': []}
+    }
 
     if len(href) > 0:
         domain = get_domain(href)
@@ -68,10 +69,12 @@ def clean(txt, href=''):
 
         if need_cleaning(domain):
             rm_patterns, rp_patterns = update_patterns(rm_patterns, rp_patterns, domain, filters)
-            for p in rm_patterns:
-                txt = re.sub(p, r'', txt)
-            for i, p in enumerate(rp_patterns):
-                txt = re.sub(p[0], p[1], txt)
+
+        for p in rm_patterns:
+            txt = re.sub(p, r'', txt)
+        for i, p in enumerate(rp_patterns):
+            txt = re.sub(p[0], p[1], txt)
+
         print(txt)
         return txt
 
@@ -82,11 +85,12 @@ def expand_gist(match_obj):
 
 
 def get_domain(url):
-    res = re.match(r'https?:\/\/([^\/]+?)/.*', url).group(1)
+    res = re.match(r'https?://([^/]+?)/.*', url).group(1)
     return res
 
+
 def capture(input):
-    input = re.sub(r'<div gistlink=\"https:\/\/gist.github.com\/(.+?)\/(.+?)\.js\">', expand_gist, input)
+    input = re.sub(r'<div gistlink=\"https://gist.github.com/(.+?)/(.+?)\.js\">', expand_gist, input)
     try:
         output = pypandoc.convert_text(input, 'org', format='html')
         res = output
@@ -101,7 +105,7 @@ class index:
         input = re.match(r'([^\n]+?)\n(.*)', raw_input)
         href = input.group(1)
         html = raw_input
-        web.header('Access-Control-Allow-Origin',      '*')
+        web.header('Access-Control-Allow-Origin', '*')
         web.header('Access-Control-Allow-Credentials', 'true')
         web.header('Content-Type', 'application/text')
         return clean(capture(html), href)
