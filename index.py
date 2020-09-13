@@ -6,6 +6,7 @@ from readability import Document
 import re
 import pdb
 import gist
+from mylog import logger
 
 os.environ.setdefault('PYPANDOC_PANDOC', '/usr/local/bin/pandoc')
 
@@ -17,9 +18,9 @@ urls = (
 
 def clean(txt, href=''):
     def rm_line_breaks(match_obj):
-        s1 = re.sub(r'[\n\r]+', ' ', match_obj.group(1))
-        s2 = re.sub(r'[\n\r]+', ' ', match_obj.group(3))
-        res = f'[[{s1}][{s2}]]'
+        s1 = re.sub(r'[\n\r]+', '', match_obj[1])
+        s2 = re.sub(r'[\n\r]+', '', match_obj[3])
+        res = f' [[{s1}][{s2}]] '
         return res
 
     def need_cleaning(_domain):
@@ -30,19 +31,19 @@ def clean(txt, href=''):
     def update_patterns(_rm_patterns, _rp_patterns, _domain, _filters):
         rp = []
         rm = []
-        if (_domain in _filters):
+        if _domain in _filters:
             rp = _filters[_domain]['rp_patterns']
             rm = _filters[_domain]['rm_patterns']
         _rp_patterns += rp
         _rm_patterns += rm
-        return (_rm_patterns, _rp_patterns)
+        return _rm_patterns, _rp_patterns
 
     filters = {'www.bloomberg.com':
         {'rp_patterns': [
-            (r'\[\[((.|\n)+?)\]\[((.|\n)+?)\]\]', rm_line_breaks),
             (r'^\*([^\*\n]+?)\*$', r'\*\* \1'),
             (r'(?<!^)\n(?!(\n|$))', ''),
             (r'\[\[([^\]]+?)\]\[\]\](\n*)(\w+)', r' [[\1][\3]]'),
+            (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]', rm_line_breaks),
             (r'\n', r'\n\n')
         ],
             'rm_patterns': []}
@@ -53,17 +54,31 @@ def clean(txt, href=''):
     else:
         domain = ''
 
+    def keep_breaks(line_txt):
+        line_txt = line_txt.strip()
+        filters = [r'#\+.+', r'\*+\s.+', r'\+\s.+', r'\-\s.+', r'\:[^:]+?\:', r'https?\://.+']
+        for f in filters:
+            if re.match(f, line_txt) is not None:
+                return True
+        return False
+
+    def rm_manual_line_breaks(match_obj):
+        line_txt = match_obj[0]
+        if keep_breaks(line_txt):
+            return line_txt
+        else:
+            return line_txt.strip() + ' '
+
     if len(txt) > 0:
-        rm_patterns = [r'<<.+?>>', r'\\\\']
+        rm_patterns = [r'<<.*>>', r'\\\\']
         rp_patterns = [
-            (r'\[\[(.+?)\]\[\]\]\s*(\w+)', r'[[\1][\2]]'),
-            (r'^(\*+?)\s', r'\1* '),
-            # (r'\[\[((.|\n)+?)\]\[((.|\n)+?)\]\]', rm_line_breaks),
-            # (r'^\*([^\*\n]+?)\*$', '\*\* \1')
+            (r'\n*\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]\n*', rm_line_breaks),
+            (r'\n*\[\[(.+?)\]\[\]\]\s*(\w+)\n*', r'[[\1][\2]] '),
+            (r'^(\*+)\s', r'\1\* '),
             (r'\n{2,}', r'\n\n'),
-            # for bloomberg only
-            # (r'(?<!^)\n(?!(\n|$))', ''),
-            # (r'\n', r'\n\n')
+            (r'[\u202F\u00A0]', ' '),
+            (r'(.*?\w\n+)', rm_manual_line_breaks),
+            (r'(#\+END_EXAMPLE)\n*', r'\1\n\n'),
 
         ]
 
@@ -75,13 +90,12 @@ def clean(txt, href=''):
         for i, p in enumerate(rp_patterns):
             txt = re.sub(p[0], p[1], txt)
 
-        print(txt)
         return txt
 
 
 def expand_gist(match_obj):
-    id = match_obj.group(2)
-    return f'<pre>{gist.get_content(id)}</pre>'
+    _id = match_obj.group(2)
+    return f'<pre>{gist.get_content(_id)}</pre>'
 
 
 def get_domain(url):
