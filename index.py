@@ -19,7 +19,7 @@ def clean(txt, href=''):
     def rm_line_breaks(match_obj):
         s1 = re.sub(r'[\n\r]+', '', match_obj[1])
         s2 = re.sub(r'[\n\r]+', '', match_obj[3])
-        res = f' [[{s1}][{s2}]] '
+        res = f'[[{s1}][{s2}]] '
         return res
 
     def need_cleaning(_domain):
@@ -69,9 +69,13 @@ def clean(txt, href=''):
     #         return line_txt.strip() + ' '
 
     if len(txt) > 0:
+
+        lst = txt.split('\n')
+        txt = clean_by_line(lst)
+
         rm_patterns = [r'<<.*>>', r'\\\\']
         rp_patterns = [
-            (r'\n*\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]\n*', rm_line_breaks),
+            (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]\n*', rm_line_breaks),
             (r'\n*\[\[(.+?)\]\[\]\]\s*(\w+)\n*', r'[[\1][\2]] '),
             (r'^(\*+)\s', r'\1\* '),
             (r'\n{2,}', r'\n\n'),
@@ -90,9 +94,7 @@ def clean(txt, href=''):
         for i, p in enumerate(rp_patterns):
             txt = re.sub(p[0], p[1], txt)
 
-        lst = txt.split('\n')
-        print(txt)
-        return clean_by_line(lst)
+        return txt
 
 
 def clean_by_line(lst, off_val=False):
@@ -103,8 +105,11 @@ def clean_by_line(lst, off_val=False):
 
     res = ''
     flag = True
-
+    jump = False
     for i in range(len(lst) - 1):
+        if jump:
+            jump = False
+            continue
         lst[i] = lst[i].strip()
         lst[i + 1] = lst[i + 1].strip()
         if re.match(r'^#\+BEGIN_.+', lst[i + 1].upper()) is not None:
@@ -114,20 +119,22 @@ def clean_by_line(lst, off_val=False):
             flag = True
         if flag:
             if len(lst[i]) == 0:
+                res += '\n\n'
                 continue
             if len(lst[i + 1]) == 0:
-                res += lst[i] + '\n'
+                res += lst[i] + '\n\n'
                 continue
             if re.match(r'^\*+\s.+', lst[i]):
-                lst[i] = lst[i] + '\n'
+                lst[i] = lst[i]
             if re.match(r'^\*+\s.+', lst[i + 1]):
-                lst[i + 1] = lst[i + 1] + '\n'
+                lst[i + 1] = lst[i + 1]
             else:
                 if re.match(r':[^:]+?:', lst[i]) is not None:
                     lst[i] = ''
                 if re.match(r':[^:]+?:', lst[i + 1]) is not None:
                     lst[i + 1] = ''
-                res += lst[i] + lst[i + 1]
+                res += lst[i] + ' ' + lst[i + 1] + ' '
+                jump = True
         else:
             res += lst[i] + '\n'
 
