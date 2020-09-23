@@ -6,7 +6,6 @@ from readability import Document
 import re
 import pdb
 import gist
-from mylog import logger
 
 os.environ.setdefault('PYPANDOC_PANDOC', '/usr/local/bin/pandoc')
 
@@ -54,20 +53,20 @@ def clean(txt, href=''):
     else:
         domain = ''
 
-    def keep_breaks(line_txt):
-        line_txt = line_txt.strip()
-        filters = [r'#\+.+', r'\*+\s.+', r'\+\s.+', r'\-\s.+', r'\:[^:]+?\:', r'https?\://.+']
-        for f in filters:
-            if re.match(f, line_txt) is not None:
-                return True
-        return False
+    # def keep_breaks(line_txt):
+    #     line_txt = line_txt.strip()
+    #     fs = [r'#\+.+', r'\*+\s.+', r'\+\s.+', r'\-\s.+', r'\:[^:]+?\:', r'https?\://.+']
+    #     for f in fs:
+    #         if re.match(f, line_txt) is not None:
+    #             return True
+    #     return False
 
-    def rm_manual_line_breaks(match_obj):
-        line_txt = match_obj[0]
-        if keep_breaks(line_txt):
-            return line_txt
-        else:
-            return line_txt.strip() + ' '
+    # def rm_manual_line_breaks(match_obj):
+    #     line_txt = match_obj[0]
+    #     if keep_breaks(line_txt):
+    #         return line_txt
+    #     else:
+    #         return line_txt.strip() + ' '
 
     if len(txt) > 0:
         rm_patterns = [r'<<.*>>', r'\\\\']
@@ -77,8 +76,9 @@ def clean(txt, href=''):
             (r'^(\*+)\s', r'\1\* '),
             (r'\n{2,}', r'\n\n'),
             (r'[\u202F\u00A0]', ' '),
-            (r'(.*?\w\n+)', rm_manual_line_breaks),
-            (r'(#\+END_EXAMPLE)\n*', r'\1\n\n'),
+            # (r'(?<!^)$\n(?!^$)', ' ')
+            # (r'(.*?\w\n+)', rm_manual_line_breaks),
+            # (r'(#\+(END|BEGIN)_\w+)\n*', r'\n\1\n\n'),
 
         ]
 
@@ -90,7 +90,48 @@ def clean(txt, href=''):
         for i, p in enumerate(rp_patterns):
             txt = re.sub(p[0], p[1], txt)
 
-        return txt
+        lst = txt.split('\n')
+        print(txt)
+        return clean_by_line(lst)
+
+
+def clean_by_line(lst, off_val=False):
+    if lst is None:
+        return ''
+    if len(lst) < 2:
+        return ''.join(lst)
+
+    res = ''
+    flag = True
+
+    for i in range(len(lst) - 1):
+        lst[i] = lst[i].strip()
+        lst[i + 1] = lst[i + 1].strip()
+        if re.match(r'^#\+BEGIN_.+', lst[i + 1].upper()) is not None:
+            flag = False
+        if re.match(r'^#\+END_.+', lst[i].upper()) is not None:
+            lst[i] += '\n'
+            flag = True
+        if flag:
+            if len(lst[i]) == 0:
+                continue
+            if len(lst[i + 1]) == 0:
+                res += lst[i] + '\n'
+                continue
+            if re.match(r'^\*+\s.+', lst[i]):
+                lst[i] = lst[i] + '\n'
+            if re.match(r'^\*+\s.+', lst[i + 1]):
+                lst[i + 1] = lst[i + 1] + '\n'
+            else:
+                if re.match(r':[^:]+?:', lst[i]) is not None:
+                    lst[i] = ''
+                if re.match(r':[^:]+?:', lst[i + 1]) is not None:
+                    lst[i + 1] = ''
+                res += lst[i] + lst[i + 1]
+        else:
+            res += lst[i] + '\n'
+
+    return res
 
 
 def expand_gist(match_obj):
@@ -103,10 +144,10 @@ def get_domain(url):
     return res
 
 
-def capture(input):
-    input = re.sub(r'<div gistlink=\"https://gist.github.com/(.+?)/(.+?)\.js\">', expand_gist, input)
+def capture(input_str):
+    input_str = re.sub(r'<div gistlink=\"https://gist.github.com/(.+?)/(.+?)\.js\">', expand_gist, input_str)
     try:
-        output = pypandoc.convert_text(input, 'org', format='html')
+        output = pypandoc.convert_text(input_str, 'org', format='html')
         res = output
     except:
         res = ''
@@ -116,8 +157,8 @@ def capture(input):
 class index:
     def POST(self):
         raw_input = web.data().decode('utf8')
-        input = re.match(r'([^\n]+?)\n(.*)', raw_input)
-        href = input.group(1)
+        input_text = re.match(r'([^\n]+?)\n(.*)', raw_input)
+        href = input_text.group(1)
         html = raw_input
         web.header('Access-Control-Allow-Origin', '*')
         web.header('Access-Control-Allow-Credentials', 'true')

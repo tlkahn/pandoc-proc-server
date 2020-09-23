@@ -35,3 +35,16 @@ class Logger():
 
 
 logger = Logger()
+
+
+class Animal:
+    SIZES = lambda: ["Huge", "Big", "Medium", "Small"]
+
+
+class Horse(Animal):
+    def printSize(self):
+        print(Animal.SIZES()[1])
+
+h= Horse()
+h.printSize()
+h.__class__.SIZES()
