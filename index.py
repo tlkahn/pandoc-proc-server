@@ -19,7 +19,7 @@ def clean(txt, href=''):
     def rm_line_breaks(match_obj):
         s1 = re.sub(r'[\n\r]+', '', match_obj[1])
         s2 = re.sub(r'[\n\r]+', '', match_obj[3])
-        res = f'[[{s1}][{s2}]] '
+        res = f'[[{s1}][{s2}]]'
         return res
 
     def need_cleaning(_domain):
@@ -41,7 +41,7 @@ def clean(txt, href=''):
         {'rp_patterns': [
             (r'^\*([^\*\n]+?)\*$', r'\*\* \1'),
             (r'(?<!^)\n(?!(\n|$))', ''),
-            (r'\[\[([^\]]+?)\]\[\]\](\n*)(\w+)', r' [[\1][\3]]'),
+            (r'\[\[([^\]]+?)\]\[\]\](\n*)(\w+)', r'[[\1][\3]]'),
             (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]', rm_line_breaks),
             (r'\n', r'\n\n')
         ],
@@ -70,16 +70,24 @@ def clean(txt, href=''):
 
     if len(txt) > 0:
 
-        lst = txt.split('\n')
-        txt = clean_by_line(lst)
+        # lst = txt.split('\n')
+        # txt = clean_by_line(lst)
 
         rm_patterns = [r'<<.*>>', r'\\\\']
         rp_patterns = [
             (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]\n*', rm_line_breaks),
-            (r'\n*\[\[(.+?)\]\[\]\]\s*(\w+)\n*', r'[[\1][\2]] '),
+            (r'\n*\[\[(.+?)\]\[\]\]\s*(\w+)\n*', r'[[\1][\2]]'),
             (r'^(\*+)\s', r'\1\* '),
-            (r'\n{2,}', r'\n\n'),
             (r'[\u202F\u00A0]', ' '),
+            # (r'(\d+\.\s)', r'\n\n\1'),
+            (r'\n{2,}', r'\n\n'),
+            (r'\s+(\*+\s[^\*]+?\n)', r'\n\n\1'),
+            (r'\s+(\#+CAPTION.+?)', r'\n\n\1'),
+            (r':END:', ''),
+            # (r'^\s+(?=[^\s]+)', ''),
+            (r'\s+(?=\n)', '\n'),
+            (r'https:\/\/miro.medium.com\/max\/\d+', 'https://miro.medium.com/max/2048'),
+            (r'\[\[[^\]]+?]\[\]\]', '')
             # (r'(?<!^)$\n(?!^$)', ' ')
             # (r'(.*?\w\n+)', rm_manual_line_breaks),
             # (r'(#\+(END|BEGIN)_\w+)\n*', r'\n\1\n\n'),
@@ -112,6 +120,8 @@ def clean_by_line(lst, off_val=False):
             continue
         lst[i] = lst[i].strip()
         lst[i + 1] = lst[i + 1].strip()
+        # if re.match(r'(^[\*\-\+])+\s.+', lst[i]):
+            # lst[i] += '\n'
         if re.match(r'^#\+BEGIN_.+', lst[i + 1].upper()) is not None:
             flag = False
         if re.match(r'^#\+END_.+', lst[i].upper()) is not None:
@@ -122,18 +132,14 @@ def clean_by_line(lst, off_val=False):
                 res += '\n\n'
                 continue
             if len(lst[i + 1]) == 0:
-                res += lst[i] + '\n\n'
+                res += lst[i].strip() + '\n\n'
                 continue
-            if re.match(r'^\*+\s.+', lst[i]):
-                lst[i] = lst[i]
-            if re.match(r'^\*+\s.+', lst[i + 1]):
-                lst[i + 1] = lst[i + 1]
             else:
                 if re.match(r':[^:]+?:', lst[i]) is not None:
                     lst[i] = ''
                 if re.match(r':[^:]+?:', lst[i + 1]) is not None:
                     lst[i + 1] = ''
-                res += lst[i] + ' ' + lst[i + 1] + ' '
+                res += lst[i].strip() + ' ' + lst[i + 1].strip() + ' '
                 jump = True
         else:
             res += lst[i] + '\n'
@@ -154,7 +160,7 @@ def get_domain(url):
 def capture(input_str):
     input_str = re.sub(r'<div gistlink=\"https://gist.github.com/(.+?)/(.+?)\.js\">', expand_gist, input_str)
     try:
-        output = pypandoc.convert_text(input_str, 'org', format='html')
+        output = pypandoc.convert_text(input_str, 'org', format='html', extra_args=['--wrap=none'])
         res = output
     except:
         res = ''
