@@ -80,14 +80,15 @@ def clean(txt, href=''):
             (r'^(\*+)\s', r'\1\* '),
             (r'[\u202F\u00A0]', ' '),
             # (r'(\d+\.\s)', r'\n\n\1'),
+            # (r':[^:]+:.*', ''),
             (r'\n{2,}', r'\n\n'),
+            # (r'\s+?:[^:]+?:.*(?=\n)', ''),
             (r'\s+(\*+\s[^\*]+?\n)', r'\n\n\1'),
             (r'\s+(\#+CAPTION.+?)', r'\n\n\1'),
-            (r':END:', ''),
             # (r'^\s+(?=[^\s]+)', ''),
             (r'\s+(?=\n)', '\n'),
             (r'https:\/\/miro.medium.com\/max\/\d+', 'https://miro.medium.com/max/2048'),
-            (r'\[\[[^\]]+?]\[\]\]', '')
+            # (r'\[\[[^\]]+?]\[\]\]', '')
             # (r'(?<!^)$\n(?!^$)', ' ')
             # (r'(.*?\w\n+)', rm_manual_line_breaks),
             # (r'(#\+(END|BEGIN)_\w+)\n*', r'\n\1\n\n'),
@@ -104,7 +105,7 @@ def clean(txt, href=''):
 
         return txt
 
-
+# this is so ugly that I wanna cry
 def clean_by_line(lst, off_val=False):
     if lst is None:
         return ''
