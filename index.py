@@ -53,46 +53,23 @@ def clean(txt, href=''):
     else:
         domain = ''
 
-    # def keep_breaks(line_txt):
-    #     line_txt = line_txt.strip()
-    #     fs = [r'#\+.+', r'\*+\s.+', r'\+\s.+', r'\-\s.+', r'\:[^:]+?\:', r'https?\://.+']
-    #     for f in fs:
-    #         if re.match(f, line_txt) is not None:
-    #             return True
-    #     return False
-
-    # def rm_manual_line_breaks(match_obj):
-    #     line_txt = match_obj[0]
-    #     if keep_breaks(line_txt):
-    #         return line_txt
-    #     else:
-    #         return line_txt.strip() + ' '
-
     if len(txt) > 0:
-
-        # lst = txt.split('\n')
-        # txt = clean_by_line(lst)
-
         rm_patterns = [r'<<.*>>', r'\\\\']
         rp_patterns = [
-            (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]\n*', rm_line_breaks),
-            (r'\n*\[\[(.+?)\]\[\]\]\s*(\w+)\n*', r'[[\1][\2]]'),
-            (r'^(\*+)\s', r'\1\* '),
+            (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]', rm_line_breaks),
+            (r'\n*\[\[(.+?)\]\[\]\]\s*=?(\w+)=?', r'[[\1][\2]]'),
             (r'[\u202F\u00A0]', ' '),
-            # (r'(\d+\.\s)', r'\n\n\1'),
-            # (r':[^:]+:.*', ''),
-            (r'\n{2,}', r'\n\n'),
-            # (r'\s+?:[^:]+?:.*(?=\n)', ''),
-            (r'\s+(\*+\s[^\*]+?\n)', r'\n\n\1'),
             (r'\s+(\#+CAPTION.+?)', r'\n\n\1'),
-            # (r'^\s+(?=[^\s]+)', ''),
             (r'\s+(?=\n)', '\n'),
             (r'https:\/\/miro.medium.com\/max\/\d+', 'https://miro.medium.com/max/2048'),
-            # (r'\[\[[^\]]+?]\[\]\]', '')
-            # (r'(?<!^)$\n(?!^$)', ' ')
-            # (r'(.*?\w\n+)', rm_manual_line_breaks),
-            # (r'(#\+(END|BEGIN)_\w+)\n*', r'\n\1\n\n'),
-
+            (r'\[\[comment://%20add\]\[.+?\]\]', ''),
+            (r'\[\[comments://%20show%20/%20hide\]\[\d+ comments?\]\]', ''),
+            (r'\[\[http://book.realworldhaskell.org/read/null\]\[\]\]', ''),
+            (r'\[\[http://book.realworldhaskell.org/read/null\]\[([^]]+?)\]\]', r'\1'),
+            (':END:', r':END:\n\n'),
+            (r'\n{2,}', r'\n\n'),
+            ('、', '.'),
+            (r'(\*?[一二三四五六七八九十]{1,}\W+.+?)', r'* \1')
         ]
 
         if need_cleaning(domain):
@@ -104,48 +81,6 @@ def clean(txt, href=''):
             txt = re.sub(p[0], p[1], txt)
 
         return txt
-
-# this is so ugly that I wanna cry
-def clean_by_line(lst, off_val=False):
-    if lst is None:
-        return ''
-    if len(lst) < 2:
-        return ''.join(lst)
-
-    res = ''
-    flag = True
-    jump = False
-    for i in range(len(lst) - 1):
-        if jump:
-            jump = False
-            continue
-        lst[i] = lst[i].strip()
-        lst[i + 1] = lst[i + 1].strip()
-        # if re.match(r'(^[\*\-\+])+\s.+', lst[i]):
-            # lst[i] += '\n'
-        if re.match(r'^#\+BEGIN_.+', lst[i + 1].upper()) is not None:
-            flag = False
-        if re.match(r'^#\+END_.+', lst[i].upper()) is not None:
-            lst[i] += '\n'
-            flag = True
-        if flag:
-            if len(lst[i]) == 0:
-                res += '\n\n'
-                continue
-            if len(lst[i + 1]) == 0:
-                res += lst[i].strip() + '\n\n'
-                continue
-            else:
-                if re.match(r':[^:]+?:', lst[i]) is not None:
-                    lst[i] = ''
-                if re.match(r':[^:]+?:', lst[i + 1]) is not None:
-                    lst[i + 1] = ''
-                res += lst[i].strip() + ' ' + lst[i + 1].strip() + ' '
-                jump = True
-        else:
-            res += lst[i] + '\n'
-
-    return res
 
 
 def expand_gist(match_obj):
