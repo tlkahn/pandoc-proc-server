@@ -19,7 +19,7 @@ def clean(txt, href=''):
     def rm_line_breaks(match_obj):
         s1 = re.sub(r'[\n\r]+', '', match_obj[1])
         s2 = re.sub(r'[\n\r]+', '', match_obj[3])
-        res = f'[[{s1}][{s2}]]'
+        res = '[[{}][{}]]'.format(s1, s2)
         return res
 
     def need_cleaning(_domain):
@@ -62,10 +62,6 @@ def clean(txt, href=''):
             (r'\s+(\#+CAPTION.+?)', r'\n\n\1'),
             (r'\s+(?=\n)', '\n'),
             (r'https:\/\/miro.medium.com\/max\/\d+', 'https://miro.medium.com/max/2048'),
-            (r'\[\[comment://%20add\]\[.+?\]\]', ''),
-            (r'\[\[comments://%20show%20/%20hide\]\[\d+ comments?\]\]', ''),
-            (r'\[\[http://book.realworldhaskell.org/read/null\]\[\]\]', ''),
-            (r'\[\[http://book.realworldhaskell.org/read/null\]\[([^]]+?)\]\]', r'\1'),
             (':END:', r':END:\n\n'),
             (r'\n{2,}', r'\n\n'),
             ('、', '.'),
@@ -80,12 +76,23 @@ def clean(txt, href=''):
         for i, p in enumerate(rp_patterns):
             txt = re.sub(p[0], p[1], txt)
 
+        save_to_file(txt)
         return txt
+
+
+def save_to_file(content, name='untitled.org', dir='./'):
+    try:
+        f = open(dir+name, "a")
+        f.write(content)
+    except Exception as e:
+        raise('error when writing to file', e)
+    finally:
+        f.close()
 
 
 def expand_gist(match_obj):
     _id = match_obj.group(2)
-    return f'<pre>{gist.get_content(_id)}</pre>'
+    return '<pre>{}</pre>'.format(gist.get_content(_id))
 
 
 def get_domain(url):
