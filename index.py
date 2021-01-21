@@ -1,13 +1,12 @@
-import web
 import pypandoc
 import os
-import requests
 from readability import Document
 import re
-import pdb
 import gist
+from flask import Flask
+from flask import request, jsonify, Response
 
-os.environ.setdefault('PYPANDOC_PANDOC', '/usr/local/bin/pandoc')
+os.environ.setdefault('PYPANDOC_PANDOC', '/usr/bin/pandoc')
 
 urls = (
     '/', 'index',
@@ -17,8 +16,8 @@ urls = (
 
 def clean(txt, href=''):
     def rm_line_breaks(match_obj):
-        s1 = re.sub(r'[\n\r]+', '', match_obj[1])
-        s2 = re.sub(r'[\n\r]+', '', match_obj[3])
+        s1 = re.sub(r'[\n\r]+', '', match_obj.group(1))
+        s2 = re.sub(r'[\n\r]+', '', match_obj.group(3))
         res = '[[{}][{}]]'.format(s1, s2)
         return res
 
@@ -109,29 +108,22 @@ def capture(input_str):
         res = ''
     return res
 
+app = Flask(__name__)
 
-class index:
-    def POST(self):
-        raw_input = web.data().decode('utf8')
-        input_text = re.match(r'([^\n]+?)\n(.*)', raw_input)
-        href = input_text.group(1)
-        html = raw_input
-        web.header('Access-Control-Allow-Origin', '*')
-        web.header('Access-Control-Allow-Credentials', 'true')
-        web.header('Content-Type', 'application/text')
-        return clean(capture(html), href)
+@app.route('/', methods=['POST'])
+def home():
+  if request.method == 'POST':
+    raw_input = request.form.get('content')
+    # input_text = re.match(r'([^\n]+?)\n(.*)', raw_input)
+    # href = input_text.group(1)
+    html = raw_input
+    result = clean(capture(html), '')
+    print('result: {}'.format(result))
+    r = Response(response=result, status=200)
+    r.headers['Access-Control-Allow-Origin'] = '*'
+    r.headers['Access-Control-Allow-Credentials'] = 'true'
+    r.headers['Content-Type'] = 'application/text; charset=utf-8'
+    
+    return r
 
-
-class fullpage:
-    def POST(self):
-        url = web.data().decode('utf8')
-        response = requests.get(url)
-        doc = Document(response.text)
-        summary = doc.summary()
-        web.header('Content-Type', 'application/text')
-        return clean(capture(summary))
-
-
-if __name__ == "__main__":
-    app = web.application(urls, globals())
-    app.run()
+app.run(host = '0.0.0.0')
