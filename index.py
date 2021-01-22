@@ -51,7 +51,7 @@ def clean(txt, href=''):
     else:
         domain = ''
     if len(txt) > 0:
-        rm_patterns = [r'<<.*>>', r'\\\\']
+        rm_patterns = [r'<<.*>>', r'\\\\', r'^\#\+BEGIN_HTML\n((?:.*\r?\n?)*)\#\+END_HTML']
         rp_patterns = [
             (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]', rm_line_breaks),
             (r'\n*\[\[(.+?)\]\[\]\]\s*=?(\w+)=?', r'[[\1][\2]]'),
@@ -104,7 +104,8 @@ def capture(input_str):
         expand_gist,
         input_str)
     try:
-        res = pypandoc.convert_text(input_str, 'org', format='html', extra_args=['--wrap=none'])
+        res = pypandoc.convert_text(input_str, 'latex', format='html', extra_args=['--wrap=none'])
+        res = pypandoc.convert_text(res, 'org', format='latex', extra_args=['--wrap=none'])
     except:
         res = ''
     return res
@@ -128,10 +129,9 @@ app = Flask(__name__)
 @app.route('/', methods=['POST'])
 def home():
     if request.method == 'POST':
-        html = safe_str(request.json['html'])
-        sig = request.json['sig']
-        href = request.json['url']
-        print('html: {}', html)
+        html = request.form.get('html')
+        sig = request.form.get('sig')
+        href = request.form.get('url')
         if validate_sig(href, sig):
             # file_name = 'untitled.org'
             # file_dir = './'
