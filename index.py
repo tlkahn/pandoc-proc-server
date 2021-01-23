@@ -4,6 +4,7 @@ import os
 from flask import Flask, request, Response, send_file, make_response
 import gist
 import hashlib
+import threading
 
 os.environ.setdefault('PYPANDOC_PANDOC', '/usr/bin/pandoc')
 
@@ -104,12 +105,22 @@ def capture(input_str):
     input_str = re.sub(r'<div gistlink=\"https://gist.github.com/(.+?)/(.+?)\.js\">',
         expand_gist,
         input_str)
-    try:
-        res = pypandoc.convert_text(input_str, 'latex', format='html', extra_args=['--wrap=none'])
-        res = pypandoc.convert_text(res, 'org', format='latex', extra_args=['--wrap=none'])
-    except:
-        res = ''
+    # res = pypandoc.convert_text(input_str, 'latex', format='html', extra_args=['--wrap=none'])
+    # t = threading.Thread(target=save_to_file, args = (res, 'output.tex', './'))
+    # t.daemon = True
+    # t.start()
+    res = pypandoc.convert_text(
+        input_str,
+        'org',
+        format='html-native_divs',
+        extra_args=['--wrap=none'])
+    # t = threading.Thread(target=save_to_file, args = (res, 'output.org', './'))
+    # t.daemon = True
+    # t.start()
     return res
+
+def clear_screen():
+    print('\033[2J')
 
 
 def validate_sig(input_str, sig):
@@ -133,6 +144,8 @@ def home():
         html = request.form.get('html')
         sig = request.form.get('sig')
         href = request.form.get('url')
+        clear_screen()
+        print(html.encode('utf-8').decode('utf-8'))
         if validate_sig(href, sig):
             # file_name = 'untitled.org'
             # file_dir = './'
