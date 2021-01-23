@@ -56,6 +56,7 @@ def clean(txt, href=''):
             (r'\[\[(([^\]]|\n)+?)\]\[(([^\]]|\n)+?)\]\]', rm_line_breaks),
             (r'\n*\[\[(.+?)\]\[\]\]\s*=?(\w+)=?', r'[[\1][\2]]'),
             (r'[\u202F\u00A0]', ' '),
+            (r'\[\[[^\]]+?\]\[\]\]', ''),
             (r'\s+(\#+CAPTION.+?)', r'\n\n\1'),
             (r'\s+(?=\n)', '\n'),
             (r'https:\/\/miro.medium.com\/max\/\d+', 'https://miro.medium.com/max/2048'),
