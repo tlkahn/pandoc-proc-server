@@ -144,8 +144,8 @@ def home():
         html = request.form.get('html')
         sig = request.form.get('sig')
         href = request.form.get('url')
-        clear_screen()
-        print(html.encode('utf-8').decode('utf-8'))
+        # clear_screen()
+        # print(html.encode('utf-8').decode('utf-8'))
         if validate_sig(href, sig):
             # file_name = 'untitled.org'
             # file_dir = './'
